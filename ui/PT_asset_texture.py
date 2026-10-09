@@ -105,6 +105,8 @@ class PHA_PT_asset_texture:
         col = layout.column()
         row = col.row()
         row.operator("pha.tex_scale_fix", icon="CON_SIZELIMIT")
+        row.operator("pha.uv_scale_fix", icon="UV")
+        row = col.row()
         row.operator("pha.tex_displacement_setup", icon="MOD_DISPLACE")
         row = col.row()
         row.label(text="Mapping:")
