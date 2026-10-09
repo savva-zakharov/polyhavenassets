@@ -19,8 +19,11 @@ import sys
 # e.g. utils/news.py importing API_URL from a constants module that was cached before that constant
 # existed, which raises ImportError until Blender is restarted. Dropping the stale entries first
 # means every import below re-reads from disk, so no restart is needed.
+# The previous version's submodules are also still attributes of this package, which `from . import x` would
+# return without re-importing, so drop those too.
 for _stale in [m for m in list(sys.modules) if m.startswith(f"{__package__}.")]:
     del sys.modules[_stale]
+    globals().pop(_stale[len(__package__) + 1 :].split(".")[0], None)
 
 from . import ui  # noqa: E402
 from . import operators  # noqa: E402
@@ -175,6 +178,16 @@ def register():
     bpy.types.STATUSBAR_HT_header.prepend(ui.statusbar.ui)
 
     bpy.types.WindowManager.pha_props = bpy.props.PointerProperty(type=PHAProperties)
+    bpy.types.Material.pha_mapping = bpy.props.EnumProperty(
+        name="Mapping",
+        description=(
+            "How the textures are projected. Box mapping projects onto each face from its own direction, "
+            "at the real-world size from the Poly Haven API"
+        ),
+        items=ui.PT_asset_texture.MAPPING_ITEMS,
+        get=ui.PT_asset_texture.get_mapping,
+        set=ui.PT_asset_texture.set_mapping,
+    )
     bpy.app.handlers.load_post.append(hand_check_new_assets)
     bpy.app.handlers.save_post.append(hand_check_new_assets)
     bpy.app.handlers.load_post.append(hand_check_news)
@@ -190,6 +203,7 @@ def unregister():
     bpy.app.handlers.load_post.remove(hand_check_news)
     bpy.app.handlers.save_post.remove(hand_check_news)
     del bpy.types.WindowManager.pha_props
+    del bpy.types.Material.pha_mapping
 
     prefs_panel = asset_libraries_prefs_panel()
     if prefs_panel is not None:
