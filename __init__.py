@@ -19,8 +19,11 @@ import sys
 # e.g. utils/news.py importing API_URL from a constants module that was cached before that constant
 # existed, which raises ImportError until Blender is restarted. Dropping the stale entries first
 # means every import below re-reads from disk, so no restart is needed.
+# The previous version's submodules are also still attributes of this package, which `from . import x` would
+# return without re-importing, so drop those too.
 for _stale in [m for m in list(sys.modules) if m.startswith(f"{__package__}.")]:
     del sys.modules[_stale]
+    globals().pop(_stale[len(__package__) + 1 :].split(".")[0], None)
 
 from . import ui  # noqa: E402
 from . import operators  # noqa: E402
