@@ -37,6 +37,7 @@ from bpy.app.handlers import persistent
 from .utils.check_for_new_assets import check_for_new_assets
 from .utils.news import check_news
 from . import ephemeral
+from .utils import viewport_color
 
 log = logging.getLogger(__name__)
 
@@ -60,6 +61,14 @@ class PHAPreferences(bpy.types.AddonPreferences):
         name="Disable SSL Verification",
         description="Disable SSL verification when fetching assets. Use this if you are getting SSL errors",
         default=False,
+    )
+    auto_viewport_color = bpy.props.BoolProperty(
+        name="Set Viewport Colour from Texture",
+        description=(
+            "When a Poly Haven material is added, set its viewport display colour "
+            "to the average colour of its diffuse texture"
+        ),
+        default=True,
     )
 
     # Add-on Updater Prefs
@@ -93,6 +102,7 @@ class PHAPreferences(bpy.types.AddonPreferences):
         op = row.operator("pha.pull_from_polyhaven", text="Revalidate All Assets")
         op.asset_type = "all"
         op.revalidate = True
+        layout.prop(self, "auto_viewport_color")
 
         ui.prefs_lib_reminder.prefs_lib_reminder(self, context)
 
@@ -192,6 +202,7 @@ def register():
     bpy.app.handlers.save_post.append(hand_check_new_assets)
     bpy.app.handlers.load_post.append(hand_check_news)
     bpy.app.handlers.save_post.append(hand_check_news)
+    viewport_color.register()
 
 
 def unregister():
@@ -202,6 +213,7 @@ def unregister():
     bpy.app.handlers.save_post.remove(hand_check_new_assets)
     bpy.app.handlers.load_post.remove(hand_check_news)
     bpy.app.handlers.save_post.remove(hand_check_news)
+    viewport_color.unregister()
     del bpy.types.WindowManager.pha_props
     del bpy.types.Material.pha_mapping
 
