@@ -97,8 +97,9 @@ class PHA_OT_uv_scale_fix(bpy.types.Operator):
     bl_idname = "pha.uv_scale_fix"
     bl_label = "Fix UV Scale"
     bl_description = (
-        "Scale each UV island of the objects using this material so the texture appears at its real-world size. "
-        "Unlike Fix Texture Scale, this works per object, so objects of different sizes can share the material"
+        "Scale each UV island of the selected objects using this material so the texture appears at its "
+        "real-world size. Unlike Fix Texture Scale, this works per object, so objects of different sizes can share "
+        "the material"
     )
     bl_options = {"REGISTER", "UNDO"}
 
@@ -124,7 +125,13 @@ class PHA_OT_uv_scale_fix(bpy.types.Operator):
         if obj_mode != "OBJECT":
             bpy.ops.object.mode_set(mode="OBJECT")
 
-        objects = list(tex_users(context))
+        users = list(tex_users(context))
+        objects = [obj for obj in users if obj.select_get()]
+        if not objects:
+            if obj_mode != "OBJECT":
+                bpy.ops.object.mode_set(mode=obj_mode)
+            self.report({"ERROR"}, f"No selected objects use {material.name}")
+            return {"CANCELLED"}
         done_meshes = {}
         island_count = 0
         for obj in objects:
@@ -166,9 +173,19 @@ class PHA_OT_uv_scale_fix(bpy.types.Operator):
                         mod.texture.crop_max_y = 1
 
         # The UVs now carry the real-world scale, so the material must not scale them again
+        scale_reset = False
         for node in material.node_tree.nodes:
-            if node.type == "MAPPING":
+            if node.type == "MAPPING" and tuple(node.inputs["Scale"].default_value) != (1, 1, 1):
                 node.inputs["Scale"].default_value = (1, 1, 1)
+                scale_reset = True
+        unselected = len([obj for obj in users if obj.data not in done_meshes])  # Instances of fixed meshes are fine
+        if scale_reset and unselected:
+            self.report(
+                {"WARNING"},
+                f"Reset the texture scale of {material.name}, which also changes the {unselected} unselected "
+                f"object{'s' if unselected != 1 else ''} using it. Select and fix {'them' if unselected != 1 else 'it'} "
+                "too",
+            )
 
         if obj_mode != "OBJECT":
             bpy.ops.object.mode_set(mode=obj_mode)
